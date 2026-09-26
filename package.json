@@ -1,0 +1,37 @@
+{
+  "name": "stocktrade-with-news",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Neco-arch/Stocktrade-with-news#readme",
+  "bugs": {
+    "url": "https://github.com/Neco-arch/Stocktrade-with-news/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Neco-arch/Stocktrade-with-news.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@alpacahq/alpaca-trade-api": "^4.0.3",
+    "@google/genai": "^2.24.0",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "axios": "^1.20.0",
+    "dotenv": "^18.0.3",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1",
+    "prisma": "^7.10.0"
+  },
+  "allowScripts": {
+    "@google/genai@2.24.0": true,
+    "protobufjs@7.6.6": true
+  }
+}
