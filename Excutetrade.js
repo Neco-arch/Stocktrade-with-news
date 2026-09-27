@@ -13,9 +13,9 @@ async function Runtask() {
     } else {
       return
     }
-    console.log("Trade successfully")
+    return console.log("Trade successfully")
   } catch (error) {
-    console.error("Cron execution error:", error);
+    return console.error("Cron execution error:", error);
   }
 }
 

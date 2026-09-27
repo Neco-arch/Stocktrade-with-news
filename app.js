@@ -199,18 +199,17 @@ class StockTrading {
           },
         },
       });
+      for (let item of target) {
+      await this.alpaca.trading.positions.deleteOpenPosition(item.stockticker)
+      }
+      return
 
-      console.log(target);
     } catch (error) {
       throw error;
     }
   }
 }
 
-const d = new StockTrading
 
-d.alpaca.trading.clock.clock().then((value) => {
-  console.log(value.clocks[7].phase)
-})
 
 module.exports = { StockTrading }

@@ -8,11 +8,13 @@ async function Runtask() {
     const ismarketday = await Stock.alpaca.trading.clock.clock()
     if (ismarketday.clocks[7].phase === "closed") {
         await Stock.sellstock()
+    } else {
+      return
     }
 
-    console.log("Sell stock successfully")
+    return console.log("Sell stock successfully")
   } catch (error) {
-    console.error("Error happen" + error)
+    return console.error("Error happen" + error)
   }
 }
 
