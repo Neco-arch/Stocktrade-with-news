@@ -1,50 +1,54 @@
 require("dotenv").config();
 const axios = require("axios");
 const { GoogleGenAI, Type } = require("@google/genai");
-const { prisma } = require('./lib/prisma.js');
-const { Alpaca } = require('@alpacahq/alpaca-trade-api')
+const { prisma } = require("./lib/prisma.js");
+const { Alpaca } = require("@alpacahq/alpaca-trade-api");
 
 class StockTrading {
-  constructor(newsdata = [] ) {
+  constructor(newsdata = []) {
     this.newsdata = newsdata;
     this.stockinconsider = null;
     this.ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
     });
     this.alpaca = new Alpaca({
-          keyId: process.env.APCA_API_KEY_ID,
-          secret: process.env.APCA_API_SECRET_KEY,
-          paper: true, 
-    })
+      keyId: process.env.APCA_API_KEY_ID,
+      secret: process.env.APCA_API_SECRET_KEY,
+      paper: true,
+    });
   }
 
   async DeleteUntil() {
-    const nowtime = new Date()
+    const nowtime = new Date();
     const data = await prisma.stockHistory.findMany({
-        select : {
-            stockticker : true , 
-            date : true
-        }
-    })
+      select: {
+        stockticker: true,
+        date: true,
+      },
+    });
 
-    for (let i = 0 ; i < data.length ; i ++) {
-            const timeindatabase = new Date(data[i].date);
+    for (let i = 0; i < data.length; i++) {
+      const timeindatabase = new Date(data[i].date);
 
-            const endTime = new Date(timeindatabase.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const endTime = new Date(
+        timeindatabase.getTime() + 3 * 24 * 60 * 60 * 1000,
+      );
 
-            if (nowtime > endTime) {
-                console.log("Deleted")
-                await prisma.stockHistory.delete({
-                    where : {
-                        stockticker : data[i].stockticker
-                    }
-                })
-            }
+      if (nowtime > endTime) {
+        console.log("Deleted");
+        await prisma.stockHistory.delete({
+          where: {
+            stockticker: data[i].stockticker,
+          },
+        });
+      }
     }
-
   }
 
-  async Getnews() {
+
+  async Aianyalzenews() {
+
+    // Get news
     try {
       const result = await axios.get(
         "https://api.massive.com/v2/reference/news",
@@ -54,7 +58,7 @@ class StockTrading {
             apiKey: process.env.MASSIVE_API,
             order: "desc",
           },
-        }
+        },
       );
       for (let i = 0; i < result.data.results.length; i++) {
         const putdata = result.data.results[i];
@@ -67,13 +71,13 @@ class StockTrading {
     } catch (error) {
       console.log(error);
     }
-  }
 
-  async Aianyalzenews() {
+
+    // Anaylze setiment
     const response = await this.ai.models.generateContent({
       model: "gemini-3.5-flash-lite",
       contents: [
-        `Analyze the following list of stock news and provide the sentiment for each stock ticker: ${JSON.stringify(this.newsdata)}`
+        `Analyze the following list of stock news and provide the sentiment for each stock ticker: ${JSON.stringify(this.newsdata)}`,
       ],
       config: {
         systemInstruction:
@@ -95,20 +99,19 @@ class StockTrading {
                 description: "Sentiment verdict: strictly Positive or Negative",
               },
             },
-            required: ["ticker", "testament"], 
+            required: ["ticker", "testament"],
           },
         },
       },
     });
 
     this.stockinconsider = JSON.parse(response.text);
-  }
 
-  async AnaylzeStock() {
+    // Analyze Fundemental and Save to db
     const result = await this.ai.models.generateContent({
       model: "gemini-3.5-flash-lite",
       contents: [
-        `Analyze the following list of stocks with sentiment. Analyze these companies fundamentally, drop companies with weak foundations, set a 12-18 month price target, and keep the list diversified: ${JSON.stringify(this.stockinconsider)}`
+        `Analyze the following list of stocks with sentiment. Analyze these companies fundamentally, drop companies with weak foundations, set a 12-18 month price target, and keep the list diversified: ${JSON.stringify(this.stockinconsider)}`,
       ],
       config: {
         systemInstruction:
@@ -131,69 +134,83 @@ class StockTrading {
               },
               reason: {
                 type: Type.STRING,
-                description:
-                  "Reason why this stock has strong fundamentals",
+                description: "Reason why this stock has strong fundamentals",
               },
             },
-            required: ["stockticker", "pricetarget", "reason"],  
+            required: ["stockticker", "pricetarget", "reason"],
           },
         },
       },
     });
     const data = JSON.parse(result.text);
-    for (let i = 0 ; i < data.length ; i++) {
-    } 
+    for (let i = 0; i < data.length; i++) {}
     try {
-        await prisma.stockHistory.createMany({
-            data : data , 
-            skipDuplicates: false
-        })
-    } catch(error) {
-        throw error
+      await prisma.stockHistory.createMany({
+        data: data,
+        skipDuplicates: false,
+      });
+    } catch (error) {
+      throw error;
     }
   }
 
   async Buystock() {
     const stocktobuy = await prisma.stockHistory.findMany({
-      select : {
-        stockticker : true
-      }
-    })
+      select: {
+        stockticker: true,
+      },
+    });
 
     for (const item of stocktobuy) {
       try {
-        const account = await this.alpaca.trading.account.getAccount()
+        const account = await this.alpaca.trading.account.getAccount();
         const order = await this.alpaca.trading.orders.market({
-          symbol: item.stockticker ,
-          side : "buy" ,
-          notional : Number(account.buyingPower * 0.2).toFixed(2) , 
-          timeInForce : 'day'
-        })
-        console.log('Buy :' + order)
-      } catch(error) {
-        console.log(error)
+          symbol: item.stockticker,
+          side: "buy",
+          notional: Number(account.buyingPower * 0.2).toFixed(2),
+          timeInForce: "day",
+        });
+        console.log("Buy :" + order);
+      } catch (error) {
+        console.log(error);
       }
     }
   }
 
   async sellstock() {
-    const sellticker = []
+    const stocks = [];
     try {
-      const symbol = await this.alpaca.trading.positions.getAllOpenPositions()
-    } catch(error) {
-      throw error
-    }
-  }
+      const data = await this.alpaca.trading.positions.getAllOpenPositions();
+      const data2 = await this.alpaca.trading.orders.getAllOrders();
+      for (let item of data) {
+        stocks.push(item.symbol);
+      }
 
-  async Runall() {
-    //await this.DeleteUntil();
-    //await this.Getnews();
-    //await this.Aianyalzenews();
-    //await this.AnaylzeStock();
-    //await this.Buystock()
-    await this.sellstock()
+      for (let stock of data2) {
+        stocks.push(stock.symbol);
+      }
+
+      const removedupe = Array.from(new Set(stocks));
+
+      const target = await prisma.stockHistory.findMany({
+        where: {
+          stockticker: {
+            notIn: removedupe,
+          },
+        },
+      });
+
+      console.log(target);
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
-const Stock = new StockTrading();
-Stock.Runall();
+const d = new StockTrading
+
+d.alpaca.trading.clock.clock().then((value) => {
+  console.log(value.clocks[7].phase)
+})
+
+module.exports = { StockTrading }
