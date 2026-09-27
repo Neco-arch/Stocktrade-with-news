@@ -2,13 +2,7 @@
 require("dotenv").config();
 const { StockTrading } = require("./app"); 
 
-export default async function handler(request, response) {
-  // 1. Security Check: Ensure only Vercel Cron can call this
-  const authHeader = request.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return response.status(401).json({ error: "Unauthorized" });
-  }
-
+async function Runtask() {
   try {
     const Stock = new StockTrading();
     const ismarketday = await Stock.alpaca.trading.clock.clock()
@@ -16,9 +10,10 @@ export default async function handler(request, response) {
         await Stock.sellstock()
     }
 
-    return response.status(200).json({ success: true, message: "Script completed successfully" });
+    console.log("Sell stock successfully")
   } catch (error) {
-    console.error("Cron execution error:", error);
-    return response.status(500).json({ error: error.message });
+    console.error("Error happen" + error)
   }
 }
+
+Runtask()
